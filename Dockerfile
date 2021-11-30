@@ -55,7 +55,7 @@ WORKDIR $OCCANT_ROOT_DIR/occant_utils/astar_pycpp
 RUN git checkout 3a44fcc48fd7f559bae6422c0bf77883b672247b
 RUN make
 WORKDIR $OCCANT_ROOT_DIR
-RUN /root/miniconda3/envs/env/bin/pip install torch==1.2.0  # 1.3.1 ?
+RUN /root/miniconda3/envs/env/bin/pip install torch==1.4.0  # 1.3.1 ?
 RUN /root/miniconda3/envs/env/bin/pip install -r requirements.txt
 WORKDIR $OCCANT_ROOT_DIR
 RUN ln -s environments/habitat/habitat-api/data data
