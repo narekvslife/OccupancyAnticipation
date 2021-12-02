@@ -82,7 +82,6 @@ RUN /root/miniconda3/envs/env/bin/pip install environments/habitat/habitat-sim/b
 RUN mkdir -p trained_models/occant_rgb/run_00/navigation_eval_noise_free_tb
 
 # this is just dancing aroung to make torch and cuda dependencies work
-RUN /root/miniconda3/envs/env/bin/pip uninstall torch torch-scatter 
-RUN /root/miniconda3/envs/env/bin/pip install --pre --force-reinstall --no-cache torch torchvision -f https://download.pytorch.org/whl/nightly/cu102/torch_nightly.html
+RUN /root/miniconda3/envs/env/bin/pip uninstall --y torch torch-scatter
+RUN /root/miniconda3/envs/env/bin/pip install --force-reinstall --no-cache torch==1.3.1 torchvision==0.4.2
 RUN /root/miniconda3/envs/env/bin/pip install numpy==1.20.0
-RUN /root/miniconda3/envs/env/bin/pip install --force-reinstall --no-cache torch-scatter==1.3.1
