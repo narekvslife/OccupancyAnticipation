@@ -14,7 +14,7 @@ T_MAX: 1000
 
 EVAL:
   SPLIT: "val"
-  USE_CKPT_CONFIG: True
+  USE_CKPT_CONFIG: False
 
 RL:
   ANS:
