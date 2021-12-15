@@ -238,6 +238,10 @@ class ResNetRGBEncoder(nn.Module):
             resnet = tmodels.resnet50(pretrained=True)
         elif resnet_type == "resnet18":
             resnet = tmodels.resnet18(pretrained=True)
+        elif resnet_type == "resnet101":
+            resnet = tmodels.resnet101(pretrained=True)
+        elif resnet_type == "resnet152":
+            resnet = tmodels.resnet152(pretrained=True)
         else:
             raise ValueError(f"ResNet type {resnet_type} not defined!")
 
