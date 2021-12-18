@@ -160,7 +160,17 @@ class OccAntRGB(BaseModel):
         resnet_type = (
             gp_cfg.resnet_type if hasattr(gp_cfg, "resnet_type") else "resnet50"
         )
-        infeats = 768 if resnet_type == "resnet50" else 192
+
+        if resnet_type == "resnet18":
+            infeats = 192
+        elif resnet_type == "resnet50":
+            infeats = 768
+        elif resnet_type == "resnet101":
+            infeats = 768
+        elif resnet_type == "resnet152":
+            infeats = 768
+        else:
+            raise Exception('WHAT IS THIS RESNET TYPE??')
         nsf = gp_cfg.unet_nsf
         unet_feat_size = nsf * 8
 
