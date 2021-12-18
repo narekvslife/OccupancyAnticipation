@@ -283,7 +283,7 @@ class FPN(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self.model = tmodels.detection.fasterrcnn_resnet50_fpn(pretrained=True).backbone
+        self.model = tmodels.detection.backbone_utils.resnet_fpn_backbone('resnet18', pretrained=True)
 
     def forward(self, x):
         """
