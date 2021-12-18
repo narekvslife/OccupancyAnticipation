@@ -272,3 +272,21 @@ class ResNetRGBEncoder(nn.Module):
 
         x_feat = torch.cat([x_block1_red, x_block2], dim=1)  # (bs, 768, H/8, W/8)
         return x_feat
+
+
+class FPN(nn.Module):
+    """
+    Encodes RGB image via ResNet block1, block2 and merges them.
+    """
+
+    def __init__(self):
+        self.model = tmodels.detection.fasterrcnn_resnet50_fpn(pretrained=True).backbone
+
+    def forward(self, x):
+        """
+        Inputs:
+            x - RGB image of size (bs, 3, H, W)
+        """
+        res = self.model(x)
+        print(res.shape)
+        return res

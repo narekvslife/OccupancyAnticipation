@@ -16,6 +16,7 @@ from occant_baselines.models.unet import (
     LearnedRGBProjection,
     MergeMultimodal,
     ResNetRGBEncoder,
+    FPN
 )
 
 
@@ -168,7 +169,12 @@ class OccAntRGB(BaseModel):
         unet_feat_size = nsf * 8
 
         # RGB encoder branch
-        self.gp_rgb_encoder = ResNetRGBEncoder(resnet_type)
+
+        if resnet_type == 'fpn':
+            self.gp_rgb_encoder = FPN()
+        else:
+            self.gp_rgb_encoder = ResNetRGBEncoder(resnet_type)
+
         self.gp_rgb_projector = LearnedRGBProjection(mtype="upsample", infeats=infeats)
         self.gp_rgb_unet = MiniUNetEncoder(infeats, unet_feat_size)
 
