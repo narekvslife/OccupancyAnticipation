@@ -264,4 +264,5 @@ class ResNetRGBEncoder(nn.Module):
         )  # (bs, 256, H/8, W/8)
         x_feat = torch.cat([x_block1_red, x_block2], dim=1)  # (bs, 768, H/8, W/8)
 
+        x_feat = x_feat[:, :192, :, :]
         return x_feat
