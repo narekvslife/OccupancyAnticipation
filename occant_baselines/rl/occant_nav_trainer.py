@@ -286,6 +286,10 @@ class OccAntNavTrainer(BaseRLTrainer):
             k.replace("actor_critic.", ""): v
             for k, v in ckpt_dict["local_state_dict"].items()
         }
+
+        # # here we're ignoring the loading of pfine-tuned resnet weights, since we want to
+        mapper_dict = {k: v for k, v in mapper_dict.items() if "resnet" not in k}
+
         # Strict = False is set to ignore to handle the case where
         # pose_estimator is not required.
         self.mapper.load_state_dict(mapper_dict, strict=False)
