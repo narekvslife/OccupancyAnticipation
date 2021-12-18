@@ -233,6 +233,7 @@ class ResNetRGBEncoder(nn.Module):
     """
 
     def __init__(self, resnet_type="resnet50"):
+        self.resnet_type = resnet_type
         super().__init__()
         if resnet_type == "resnet50":
             resnet = tmodels.resnet50(pretrained=True)
@@ -262,7 +263,12 @@ class ResNetRGBEncoder(nn.Module):
         x_block1_red = F.avg_pool2d(
             x_block1, 3, stride=2, padding=1
         )  # (bs, 256, H/8, W/8)
-        x_feat = torch.cat([x_block1_red, x_block2], dim=1)  # (bs, 768, H/8, W/8)
 
-        x_feat = x_feat[:, :192, :, :]
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        if self.resnet_type in ["resnet101", "resnet152"]:
+            x_block1_red = nn.Conv2d(256, 64, kernel_size=(1, 1)).to(device)(x_block1_red)
+            x_block2 = nn.Conv2d(512, 128, kernel_size=(1, 1)).to(device)(x_block2)
+
+        x_feat = torch.cat([x_block1_red, x_block2], dim=1)  # (bs, 768, H/8, W/8)
         return x_feat
