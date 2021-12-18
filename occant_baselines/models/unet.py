@@ -233,8 +233,10 @@ class ResNetRGBEncoder(nn.Module):
     """
 
     def __init__(self, resnet_type="resnet50"):
-        self.resnet_type = resnet_type
         super().__init__()
+
+        self.resnet_type = resnet_type
+
         if resnet_type == "resnet50":
             resnet = tmodels.resnet50(pretrained=True)
         elif resnet_type == "resnet18":
@@ -280,6 +282,7 @@ class FPN(nn.Module):
     """
 
     def __init__(self):
+        super().__init__()
         self.model = tmodels.detection.fasterrcnn_resnet50_fpn(pretrained=True).backbone
 
     def forward(self, x):
