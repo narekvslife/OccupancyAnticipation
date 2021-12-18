@@ -290,6 +290,8 @@ class FPN(nn.Module):
         Inputs:
             x - RGB image of size (bs, 3, H, W)
         """
-        res = self.model(x)
-        print(res.shape)
-        return res
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        features = self.model(x)[0]
+        features = nn.Conv2d(256, 192, kernel_size=(1, 1)).to(device)(features)
+        features = nn.MaxPool2d(2).to(device)(features)
+        return features
