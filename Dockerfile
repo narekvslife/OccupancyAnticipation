@@ -49,7 +49,7 @@ RUN sudo apt-get install -yq \
           unzip || true
 
 WORKDIR $OCCANT_ROOT_DIR/environments/habitat/habitat-sim
-RUN git checkout 2689aee121ae8123c3072af820f4c5333df487c2
+RUN git checkout custom_noise_models
 RUN /root/miniconda3/envs/env/bin/python setup.py install --headless --with-cuda
 WORKDIR $OCCANT_ROOT_DIR/occant_utils/astar_pycpp
 RUN git checkout 3a44fcc48fd7f559bae6422c0bf77883b672247b
