@@ -6,4 +6,4 @@
 	url = git@github.com:srama2512/astar_pycpp.git
 [submodule "environments/habitat/habitat-sim"]
 	path = environments/habitat/habitat-sim
-	url = git@github.com:facebookresearch/habitat-sim.git
+	url = git@github.com:narekvslife/habitat-sim.git
