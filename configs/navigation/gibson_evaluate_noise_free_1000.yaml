@@ -11,6 +11,10 @@ SIMULATOR:
     WIDTH: 128
     HEIGHT: 128
     HFOV: 90
+#    NOISE_MODEL: "GaussianNoiseModel"
+#    NOISE_MODEL_KWARGS:
+#      intensity_constant: 0.2
+    
   DEPTH_SENSOR:
     WIDTH: 128
     HEIGHT: 128
