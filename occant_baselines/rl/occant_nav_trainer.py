@@ -33,6 +33,13 @@ from occant_baselines.models.mapnet import DepthProjectionNet
 from occant_baselines.models.occant import OccupancyAnticipator
 from einops import rearrange
 
+from habitat_extensions.utils import observations_to_image
+from habitat_baselines.common.utils import (
+    batch_obs,
+    generate_video,
+    linear_decay,
+)
+
 
 @baseline_registry.register_trainer(name="occant_nav")
 class OccAntNavTrainer(BaseRLTrainer):
@@ -95,6 +102,12 @@ class OccAntNavTrainer(BaseRLTrainer):
         ego_proj_config.camera_height = camera_height
         ego_proj_config.height_thresholds = height_thresholds
         config.RL.ANS.OCCUPANCY_ANTICIPATOR.EGO_PROJECTION = ego_proj_config
+        # Set the GT anticipation options
+        wall_fov = config.RL.ANS.OCCUPANCY_ANTICIPATOR.GP_ANTICIPATION.wall_fov
+        config.TASK_CONFIG.TASK.GT_EGO_MAP_ANTICIPATED.WALL_FOV = wall_fov
+        config.TASK_CONFIG.TASK.GT_EGO_MAP_ANTICIPATED.MAP_SIZE = map_size
+        config.TASK_CONFIG.TASK.GT_EGO_MAP_ANTICIPATED.MAP_SCALE = map_scale
+        config.TASK_CONFIG.TASK.GT_EGO_MAP_ANTICIPATED.MAX_SENSOR_RANGE = -1
         # Set the correct image scaling values
         config.RL.ANS.MAPPER.image_scale_hw = config.RL.ANS.image_scale_hw
         config.RL.ANS.LOCAL_POLICY.image_scale_hw = config.RL.ANS.image_scale_hw
@@ -105,6 +118,11 @@ class OccAntNavTrainer(BaseRLTrainer):
         config.RL.ANS.LOCAL_POLICY.AGENT_DYNAMICS.turn_angle = (
             config.TASK_CONFIG.SIMULATOR.TURN_ANGLE
         )
+        # Enable GT anticipation sensor for baseline evaluation
+        if config.RL.ANS.OCCUPANCY_ANTICIPATOR.type == "occant_ground_truth":
+            if 'GT_EGO_MAP_ANTICIPATED' not in config.TASK_CONFIG.TASK.SENSORS:
+                config.TASK_CONFIG.TASK.SENSORS.append('GT_EGO_MAP_ANTICIPATED')
+
         config.freeze()
 
     def _setup_actor_critic_agent(self, ppo_cfg: Config, ans_cfg: Config) -> None:
@@ -281,15 +299,12 @@ class OccAntNavTrainer(BaseRLTrainer):
             k.replace("mapper.", ""): v
             for k, v in ckpt_dict["mapper_state_dict"].items()
         }
+        mapper_dict = {k: v for k, v in mapper_dict.items() if "resnet" not in k}
         # Converting the state_dict of local_agent to just the local_policy.
         local_dict = {
             k.replace("actor_critic.", ""): v
             for k, v in ckpt_dict["local_state_dict"].items()
         }
-
-        # # here we're ignoring the loading of pfine-tuned resnet weights, since we want to
-        mapper_dict = {k: v for k, v in mapper_dict.items() if "resnet" not in k}
-
         # Strict = False is set to ignore to handle the case where
         # pose_estimator is not required.
         self.mapper.load_state_dict(mapper_dict, strict=False)
@@ -358,6 +373,7 @@ class OccAntNavTrainer(BaseRLTrainer):
         times_per_step = deque()
         # Define a simple function to return episode difficulty based on
         # the geodesic distance
+
         def classify_difficulty(gd):
             if gd < 5.0:
                 return "easy"
@@ -369,6 +385,10 @@ class OccAntNavTrainer(BaseRLTrainer):
         eval_start_time = time.time()
         # Reset environments only for the very first batch
         observations = self.envs.reset()
+
+        if len(self.config.VIDEO_OPTION) > 0:
+            os.makedirs(self.config.VIDEO_DIR, exist_ok=True)
+
         for ep in range(number_of_eval_episodes):
             # ============================== Reset agent ==============================
             # Reset agent states
@@ -388,6 +408,9 @@ class OccAntNavTrainer(BaseRLTrainer):
             # =========================== Episode loop ================================
             ep_start_time = time.time()
             current_episodes = self.envs.current_episodes()
+
+            rgb_frames = []  # type: List[List[np.ndarray]]
+
             for ep_step in range(self.config.T_MAX):
                 step_start_time = time.time()
                 # ============================ Action step ============================
@@ -435,6 +458,11 @@ class OccAntNavTrainer(BaseRLTrainer):
                 observations, _, dones, infos = [list(x) for x in zip(*outputs)]
 
                 times_per_step.append(time.time() - step_start_time)
+                # ============================ Save Frame s ==========================
+                frame = observations_to_image(
+                    observations[0], infos[0], observation_size=300
+                )
+                rgb_frames.append(frame)
                 # ============================ Process metrics ========================
                 if dones[0]:
                     times_per_episode.append(time.time() - ep_start_time)
@@ -470,13 +498,24 @@ class OccAntNavTrainer(BaseRLTrainer):
                         logger.info(f"Time per step: {secs_per_step:.3f} secs")
                         logger.info(f"ETA: {eta_completion:.3f} mins")
 
+                    if self.config.SAVE_VIDEO:
+                        generate_video(
+                            video_option=self.config.VIDEO_OPTION,
+                            video_dir=self.config.VIDEO_DIR,
+                            images=rgb_frames,
+                            episode_id=current_episodes[i].episode_id,
+                            checkpoint_idx=checkpoint_index,
+                            metrics={},
+                            tb_writer=writer,
+                        )
+
                     # For navigation, terminate episode loop when dones is called
                     break
             # done-for
 
         if checkpoint_index == 0:
             try:
-                checkpoint_index = self.config.EVAL_CKPT_PATH_DIR.split("/")[-1].split(
+                eval_ckpt_idx = self.config.EVAL_CKPT_PATH_DIR.split("/")[-1].split(
                     "."
                 )[1]
                 logger.add_filehandler(
@@ -494,6 +533,17 @@ class OccAntNavTrainer(BaseRLTrainer):
         logger.info(
             f"======= Evaluating over {number_of_eval_episodes} episodes ============="
         )
+        logger.info(f"======= Configuration =======")
+        noise_type_rgb = self.config.TASK_CONFIG.SIMULATOR.RGB_SENSOR.get('NOISE_MODEL')
+        noise_type_depth = self.config.TASK_CONFIG.SIMULATOR.DEPTH_SENSOR.get('NOISE_MODEL')
+        if noise_type_rgb is not None:
+            logger.info(f"Noise type: {noise_type_rgb}")
+            logger.info(
+                f"intensity_constant: {self.config.TASK_CONFIG.SIMULATOR.RGB_SENSOR.NOISE_MODEL_KWARGS.intensity_constant}")
+        if noise_type_depth is not None:
+            logger.info(f"Noise type: {noise_type_depth}")
+            logger.info(
+                f"intensity_constant: {self.config.TASK_CONFIG.SIMULATOR.DEPTH_SENSOR.NOISE_MODEL_KWARGS.noise_multiplier}")
 
         logger.info(f"=======> Navigation metrics")
         for k, v in navigation_metrics.items():
@@ -510,4 +560,5 @@ class OccAntNavTrainer(BaseRLTrainer):
 
         total_eval_time = (time.time() - eval_start_time) / 60.0
         logger.info(f"Total evaluation time: {total_eval_time:.3f} mins")
+        logger.info("\n")
         self.envs.close()
