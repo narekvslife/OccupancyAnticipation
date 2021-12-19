@@ -537,9 +537,14 @@ class OccAntNavTrainer(BaseRLTrainer):
         noise_type_rgb = self.config.TASK_CONFIG.SIMULATOR.RGB_SENSOR.get('NOISE_MODEL')
         noise_type_depth = self.config.TASK_CONFIG.SIMULATOR.DEPTH_SENSOR.get('NOISE_MODEL')
         if noise_type_rgb is not None:
-            logger.info(f"Noise type: {noise_type_rgb}")
-            logger.info(
-                f"intensity_constant: {self.config.TASK_CONFIG.SIMULATOR.RGB_SENSOR.NOISE_MODEL_KWARGS.intensity_constant}")
+            # this will only work if the parameter name is 'intensity_constant'
+            try:
+                logger.info(f"Noise type: {noise_type_rgb}")
+                logger.info(
+                    f"intensity_constant: {self.config.TASK_CONFIG.SIMULATOR.RGB_SENSOR.NOISE_MODEL_KWARGS.intensity_constant}")
+            except AttributeError:
+                logger.info(
+                    f"unknown attribute for rgb sensor noise")
         if noise_type_depth is not None:
             logger.info(f"Noise type: {noise_type_depth}")
             logger.info(
